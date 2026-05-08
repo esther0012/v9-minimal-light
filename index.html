@@ -324,7 +324,7 @@ footer{padding:40px 24px;}
         <label>Capacidade de investimento mensal</label>
         <select name="capacidadeInvestimento" required>
           <option value="">Selecione uma opção</option>
-          <option value="Até R$2.000">Até R$2.000</option>
+          <option value="De R$1.000 a R$2.000">De R$1.000 a R$2.000</option>
           <option value="De R$2.000 a R$3.000">De R$2.000 a R$3.000</option>
           <option value="De R$3.000 a R$5.000">De R$3.000 a R$5.000</option>
           <option value="Acima de R$5.000">Acima de R$5.000</option>
@@ -492,6 +492,30 @@ footer{padding:40px 24px;}
       }
     }
 
+    function dispararEventoPixelPorInvestimento(capacidadeInvestimento) {
+      if (typeof fbq !== 'function') {
+        return;
+      }
+
+      fbq('track', 'Lead');
+
+      const eventosPorInvestimento = {
+        'De R$1.000 a R$2.000': 'Lead Low WordP',
+        'De R$2.000 a R$3.000': 'Lead Medium WordP',
+        'De R$3.000 a R$5.000': 'Lead High WordP',
+        'Acima de R$5.000': 'Lead Very High WordP'
+      };
+
+      const nomeEvento = eventosPorInvestimento[capacidadeInvestimento];
+
+      if (nomeEvento) {
+        fbq('trackCustom', nomeEvento, {
+          capacidadeInvestimento: capacidadeInvestimento,
+          produto: 'Consórcio Exterior'
+        });
+      }
+    }
+
     telefoneInput.addEventListener('input', formatarTelefoneInternacional);
 
     telefoneInput.addEventListener('countrychange', function() {
@@ -531,6 +555,10 @@ footer{padding:40px 24px;}
       const paisSelecionado = iti.getSelectedCountryData();
       const paisIso2 = paisSelecionado.iso2 ? paisSelecionado.iso2.toUpperCase() : 'BR';
 
+      const capacidadeInvestimento = form.elements['capacidadeInvestimento']
+              ? form.elements['capacidadeInvestimento'].value
+              : '';
+
       let telefoneCompleto = telefoneInput.value;
 
       if (telefoneInput.value.trim() && window.libphonenumber) {
@@ -550,10 +578,12 @@ footer{padding:40px 24px;}
         }
       }
 
+      dispararEventoPixelPorInvestimento(capacidadeInvestimento);
+
       const payload = {
         nome: form.elements['nome'] ? form.elements['nome'].value : '',
         telefone: telefoneCompleto,
-        capacidadeInvestimento: form.elements['capacidadeInvestimento'] ? form.elements['capacidadeInvestimento'].value : '',
+        capacidadeInvestimento: capacidadeInvestimento,
 
         produto: 'Consórcio Exterior',
 
@@ -575,14 +605,8 @@ footer{padding:40px 24px;}
 
         trafficSource: urlParams.utm_source ? 'Paid' : 'Organic',
         first_traffic_source: urlParams.utm_source ? 'Paid' : 'Organic',
-
-        pagina: window.location.href,
-        aceite: form.elements['aceite'] ? form.elements['aceite'].checked : false
+        pagina: window.location.href
       };
-
-      if (typeof fbq === 'function') {
-        fbq('track', 'Lead');
-      }
 
       try {
         await fetch(webhookUrl, {
