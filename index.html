@@ -338,6 +338,7 @@ footer{padding:40px 24px;}
         <label>Nome completo</label>
         <input type="text" name="nome" placeholder="Seu nome" required>
       </div>
+      <input type="hidden" name="lead_id" id="lead_id">
 
       <div class="check-row">
         <input type="checkbox" name="aceite" required>
@@ -627,6 +628,142 @@ footer{padding:40px 24px;}
       window.location.href = obrigadoUrl;
     });
   });
+</script>
+  <script>
+document.addEventListener('DOMContentLoaded', function () {
+  function somenteNumeros(valor) {
+    return String(valor || '').replace(/\D/g, '');
+  }
+
+  function gerarIdUnico() {
+    if (window.crypto && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+
+    return 'lead_' + Date.now() + '_' + Math.random().toString(36).substring(2, 12);
+  }
+
+  function obterOuCriarLeadId() {
+    let leadId = localStorage.getItem('lead_id');
+
+    if (!leadId) {
+      leadId = gerarIdUnico();
+      localStorage.setItem('lead_id', leadId);
+    }
+
+    return leadId;
+  }
+
+  function encontrarTelefoneNoFormulario(form) {
+    const campoTelefoneVisivel =
+      form.querySelector('input[type="tel"]') ||
+      form.querySelector('input[name*="phone"]') ||
+      form.querySelector('input[name*="telefone"]') ||
+      form.querySelector('input[id*="phone"]') ||
+      form.querySelector('input[id*="telefone"]');
+
+    if (!campoTelefoneVisivel) {
+      return '';
+    }
+
+    return somenteNumeros(
+      campoTelefoneVisivel.value ||
+      campoTelefoneVisivel.getAttribute('value') ||
+      ''
+    );
+  }
+
+  function preencherLeadIdNoFormulario(form, leadId) {
+    const campoLeadId =
+      form.querySelector('input[name="lead_id"]') ||
+      form.querySelector('#lead_id');
+
+    if (!campoLeadId) {
+      return;
+    }
+
+    campoLeadId.value = leadId;
+    campoLeadId.setAttribute('value', leadId);
+
+    campoLeadId.dispatchEvent(new Event('input', { bubbles: true }));
+    campoLeadId.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function capturarESalvarDados(form, origem) {
+    const leadId = obterOuCriarLeadId();
+    const telefone = encontrarTelefoneNoFormulario(form);
+
+    localStorage.setItem('lead_id', leadId);
+
+    if (telefone && telefone.length >= 8) {
+      localStorage.setItem('lead_telefone', telefone);
+    } else {
+      console.warn('Telefone ainda não encontrado ou incompleto. Origem:', origem);
+    }
+
+    preencherLeadIdNoFormulario(form, leadId);
+  }
+
+  function processarTodosForms(origem) {
+    const forms = document.querySelectorAll('form#FORM');
+
+    forms.forEach(function (form) {
+      capturarESalvarDados(form, origem);
+    });
+  }
+
+  processarTodosForms('carregamento');
+
+  setTimeout(function () {
+    processarTodosForms('timeout 500ms');
+  }, 500);
+
+  setTimeout(function () {
+    processarTodosForms('timeout 1500ms');
+  }, 1500);
+
+  setTimeout(function () {
+    processarTodosForms('timeout 3000ms');
+  }, 3000);
+
+  document.addEventListener('input', function (event) {
+    const form = event.target.closest('form#FORM');
+
+    if (!form) {
+      return;
+    }
+
+    capturarESalvarDados(form, 'input');
+  }, true);
+
+  document.addEventListener('submit', function (event) {
+    const form = event.target;
+
+    if (!form || form.id !== 'FORM') {
+      return;
+    }
+
+    capturarESalvarDados(form, 'submit');
+  }, true);
+
+  document.addEventListener('click', function (event) {
+    const botaoSubmit = event.target.closest(
+      'button[type="submit"], input[type="submit"]'
+    );
+
+    if (!botaoSubmit) {
+      return;
+    }
+
+    const form = botaoSubmit.closest('form#FORM');
+
+    if (!form) {
+      return;
+    }
+
+    capturarESalvarDados(form, 'clique');
+  }, true);
+});
 </script>
 </body>
 </html>
